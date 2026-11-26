@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>市場買點與恐慌指標｜手機看盤版</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-main: #0b1120;
+      --bg-card: #111827;
+      --bg-sub: #1e293b;
+      --border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --btn-blue: #2563eb;
+      --btn-cyan: #0284c7;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px;
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: "Microsoft JhengHei UI", "PingFang TC", "Noto Sans CJK TC", sans-serif;
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .app-container {
+      max-width: 680px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .top-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .stock-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .tf-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tf-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 15px;
+      font-weight: 700;
+      background: var(--bg-sub);
+      color: #e2e8f0;
+      cursor: pointer;
+    }
+
+    .tf-btn.active {
+      background: var(--btn-blue);
+      color: #ffffff;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 12px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      background: var(--bg-main);
+      border: 1px solid #475569;
+      border-radius: 8px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .action-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      background: var(--btn-cyan);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .secondary-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #e2e8f0;
+      background: var(--bg-sub);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .info-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .info-line {
+      font-size: 16px;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .date-line {
+      color: var(--accent);
+    }
+
+    .price-line {
+      color: var(--text-main);
+    }
+
+    .signal-box {
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 16px;
+      font-weight: 700;
+      background: var(--bg-sub);
+      color: #fbbf24;
+    }
+
+    .history-line {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 230px;
+      width: 100%;
+    }
+
+    .sub-chart-wrap {
+      position: relative;
+      height: 125px;
+      width: 100%;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 4px 2px;
+    }
+
+    .slider-label {
+      font-size: 15px;
+      font-weight: 700;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+
+    .step-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 16px;
+      font-weight: 700;
+      background: var(--bg-sub);
+      color: #f8fafc;
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 28px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="top-card">
+      <div class="title-row">
+        <div id="stockTitle" class="stock-title">加權指數 (^TWII)</div>
+        <div class="tf-group">
+          <button class="tf-btn active" data-tf="1d" onclick="switchTimeframe('1d', this)">日線</button>
+          <button class="tf-btn" data-tf="1wk" onclick="switchTimeframe('1wk', this)">週線</button>
+          <button class="tf-btn" data-tf="1mo" onclick="switchTimeframe('1mo', this)">月線</button>
+        </div>
+      </div>
+      <div class="search-row">
+        <input
+          id="symbolInput"
+          class="search-input"
+          type="text"
+          value="^TWII"
+          placeholder="輸入代號或名稱（如 2330、0050、台積電）"
+          onkeydown="if(event.key==='Enter') loadSymbol();"
+        />
+        <button class="action-btn" onclick="loadSymbol()">查詢</button>
+        <button class="secondary-btn" onclick="quickSymbol('^TWII')">回大盤</button>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div id="dateLine" class="info-line date-line">查看日期：載入中...</div>
+      <div id="priceLine" class="info-line price-line">當日價格：-- ｜ 恐慌指數：-- ｜ KD動能：--</div>
+      <div id="signalBox" class="signal-box">買點判斷：計算中...</div>
+      <div id="historyLine" class="history-line" style="display:none;"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+      <div class="sub-chart-wrap"><canvas id="kdChart"></canvas></div>
+      <div class="sub-chart-wrap"><canvas id="vixChart"></canvas></div>
+      <div class="slider-row">
+        <span class="slider-label">日期：</span>
+        <button class="step-btn" onclick="stepDate(-1)">◀</button>
+        <input id="dateSlider" type="range" min="0" max="0" value="0" oninput="onSliderMove(this.value)" />
+        <button class="step-btn" onclick="stepDate(1)">▶</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const USE_MOCK_DATA = false;
+    const API_BASE_URL = window.location.origin;
+
+    let currentSymbol = "^TWII";
+    let currentTf = "1d";
+    let seriesData = [];
+    let selectedIdx = 0;
+    let priceChart, kdChart, vixChart;
+
+    async function fetchChartData(symbol, tf) {
+      const url = `${API_BASE_URL}/api/chart?symbol=${encodeURIComponent(symbol)}&tf=${encodeURIComponent(tf)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("查無此股票資料，請確認代號或名稱");
+      return await res.json();
+    }
+
+    function updateInfoPanel(idx) {
+      if (!seriesData.length) return;
+      const item = seriesData[idx];
+      const vixText = item.vix >= 28 ? "極度恐慌" : item.vix >= 23 ? "恐慌偏高" : item.vix >= 18 ? "正常波動" : "市場平靜";
+
+      document.getElementById("dateLine").textContent = `查看日期：${item.date}`;
+      document.getElementById("priceLine").textContent =
+        `當日價格：${item.close.toLocaleString()} ｜ 恐慌指數：${item.vix.toFixed(1)}（${vixText}） ｜ KD動能：${Math.round(item.k)} / ${Math.round(item.d)}`;
+
+      const box = document.getElementById("signalBox");
+      box.textContent = item.buy_eta;
+      box.style.background = item.signal_bg || "#1e293b";
+      box.style.color = item.signal_fg || "#fbbf24";
+
+      const nextBuy = seriesData.slice(idx + 1).find((x) => x.is_buy);
+      const histEl = document.getElementById("historyLine");
+      if (nextBuy) {
+        const diffDays = Math.max(1, Math.round((new Date(nextBuy.date) - new Date(item.date)) / 86400000));
+        histEl.textContent = `歷史對照：此日之後實際在 ${diffDays} 天後（${nextBuy.date}）出現翻身買點`;
+        histEl.style.display = "block";
+      } else {
+        histEl.style.display = "none";
+      }
+    }
+
+    function syncChartsHighlight() {
+      if (!seriesData.length || !priceChart) return;
+      const buyPointRadius = seriesData.map((d, i) => (i === selectedIdx ? 7 : d.is_buy ? 5 : 0));
+      const buyPointColors = seriesData.map((d, i) => (i === selectedIdx ? "#ef4444" : d.is_buy ? "#10b981" : "#38bdf8"));
+
+      priceChart.data.datasets[0].pointRadius = buyPointRadius;
+      priceChart.data.datasets[0].pointBackgroundColor = buyPointColors;
+      priceChart.update("none");
+    }
+
+    function selectIndex(newIdx) {
+      if (!seriesData.length) return;
+      selectedIdx = Math.max(0, Math.min(seriesData.length - 1, Number(newIdx)));
+      document.getElementById("dateSlider").value = selectedIdx;
+      updateInfoPanel(selectedIdx);
+      syncChartsHighlight();
+    }
+
+    function bindCanvasTapToDate(canvasId, chartRefGetter) {
+      const el = document.getElementById(canvasId);
+      el.addEventListener("click", (evt) => {
+        const chart = chartRefGetter();
+        if (!chart || !chart.chartArea || !seriesData.length) return;
+        const rect = el.getBoundingClientRect();
+        const x = evt.clientX - rect.left;
+        const { left, right } = chart.chartArea;
+        if (x < left || x > right) return;
+        const ratio = (x - left) / Math.max(1, right - left);
+        const idx = Math.round(ratio * (seriesData.length - 1));
+        selectIndex(idx);
+      });
+    }
+
+    function renderCharts() {
+      const labels = seriesData.map((d) => d.date.slice(5));
+      const closes = seriesData.map((d) => d.close);
+      const ma5 = seriesData.map((d) => d.ma5);
+      const ma20 = seriesData.map((d) => d.ma20);
+      const kVals = seriesData.map((d) => d.k);
+      const dVals = seriesData.map((d) => d.d);
+      const vixVals = seriesData.map((d) => d.vix);
+
+      const buyPointRadius = seriesData.map((d, i) => (i === selectedIdx ? 7 : d.is_buy ? 5 : 0));
+      const buyPointColors = seriesData.map((d, i) => (i === selectedIdx ? "#ef4444" : d.is_buy ? "#10b981" : "#38bdf8"));
+
+      [priceChart, kdChart, vixChart].forEach((c) => c && c.destroy());
+
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { labels: { color: "#e2e8f0", font: { size: 12, weight: "bold" } } },
+        },
+        scales: {
+          x: { ticks: { color: "#94a3b8", maxTicksLimit: 6 }, grid: { color: "#1e293b" } },
+          y: { ticks: { color: "#cbd5e1" }, grid: { color: "#1e293b" } },
+        },
+      };
+
+      priceChart = new Chart(document.getElementById("priceChart"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "走勢",
+              data: closes,
+              borderColor: "#ffffff",
+              borderWidth: 2.2,
+              pointRadius: buyPointRadius,
+              pointBackgroundColor: buyPointColors,
+            },
+            { label: "5日短線", data: ma5, borderColor: "#38bdf8", borderWidth: 1.4, pointRadius: 0 },
+            { label: "20日月線", data: ma20, borderColor: "#facc15", borderWidth: 1.4, pointRadius: 0 },
+          ],
+        },
+        options: commonOptions,
+      });
+
+      kdChart = new Chart(document.getElementById("kdChart"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            { label: "K值", data: kVals, borderColor: "#38bdf8", borderWidth: 1.8, pointRadius: 0 },
+            { label: "D值", data: dVals, borderColor: "#f59e0b", borderWidth: 1.8, pointRadius: 0 },
+          ],
+        },
+        options: {
+          ...commonOptions,
+          scales: {
+            ...commonOptions.scales,
+            y: { min: 0, max: 100, ticks: { stepSize: 50, color: "#cbd5e1" }, grid: { color: "#1e293b" } },
+          },
+        },
+      });
+
+      vixChart = new Chart(document.getElementById("vixChart"), {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "恐慌指數 VIX",
+              data: vixVals,
+              borderColor: "#fb7185",
+              backgroundColor: "rgba(239, 68, 68, 0.22)",
+              fill: true,
+              borderWidth: 1.8,
+              pointRadius: 0,
+            },
+          ],
+        },
+        options: commonOptions,
+      });
+
+      bindCanvasTapToDate("priceChart", () => priceChart);
+      bindCanvasTapToDate("kdChart", () => kdChart);
+      bindCanvasTapToDate("vixChart", () => vixChart);
+    }
+
+    function onSliderMove(val) {
+      selectIndex(val);
+    }
+
+    function stepDate(delta) {
+      selectIndex(selectedIdx + delta);
+    }
+
+    function switchTimeframe(tf, btnEl) {
+      currentTf = tf;
+      document.querySelectorAll(".tf-btn").forEach((b) => b.classList.remove("active"));
+      btnEl.classList.add("active");
+      loadSymbol();
+    }
+
+    function quickSymbol(sym) {
+      document.getElementById("symbolInput").value = sym;
+      loadSymbol();
+    }
+
+    async function loadSymbol() {
+      const raw = document.getElementById("symbolInput").value.trim();
+      if (!raw) return;
+      currentSymbol = raw.toUpperCase();
+      document.getElementById("signalBox").textContent = "買點判斷：正在查詢行情...";
+
+      try {
+        const payload = await fetchChartData(currentSymbol, currentTf);
+        document.getElementById("stockTitle").textContent = payload.title || currentSymbol;
+        seriesData = payload.items || [];
+        selectedIdx = Math.max(0, seriesData.length - 1);
+
+        const slider = document.getElementById("dateSlider");
+        slider.max = Math.max(0, seriesData.length - 1);
+        slider.value = selectedIdx;
+
+        updateInfoPanel(selectedIdx);
+        renderCharts();
+      } catch (err) {
+        alert(err.message || "查詢失敗");
+      }
+    }
+
+    loadSymbol();
+  </script>
+</body>
+</html>
